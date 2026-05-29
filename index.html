@@ -74,6 +74,9 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
 .stat-num{font-size:22px;font-weight:700;margin-bottom:2px}
 .stat-lbl{font-size:11px;color:#6b8caa}
 .leaflet-tooltip{background:#081625;border:1px solid #1a3a5c;color:#e0eeff;font-family:'Sarabun',sans-serif;font-size:12px}
+.btn-ext{background:#0a2035;border:1px solid #1a3a5c;color:#60a5fa;padding:5px 11px;border-radius:6px;
+  cursor:pointer;font-family:inherit;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.btn-ext:hover{border-color:#60a5fa}
 @media print{.hdr .tabs,.fbar,.btn,.btn-dl,.btn-pdf{display:none!important}.panel{break-inside:avoid}}
 </style>
 </head>
@@ -99,6 +102,7 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
     <button class="tab" onclick="goTab('samsak')">⚠️ ซ้ำซาก</button>
     <button class="tab" onclick="goTab('projects')">📁 โครงการ</button>
     <button class="tab" onclick="goTab('analysis')">🔍 วิเคราะห์ชี้เป้า</button>
+    <button class="tab" onclick="goTab('weather')">🌧️ สภาพอากาศ-เรดาร์</button>
   </div>
 </div>
 
@@ -358,6 +362,97 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
     <div id="gap-table" style="overflow-x:auto"></div>
   </div>
 </div>
+
+<!-- ===== WEATHER REALTIME TAB ===== -->
+<div id="tab-weather" class="hidden">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:600;color:#00c6ff">🌧️ ติดตามสภาพอากาศเรียลไทม์ – ลุ่มน้ำสาละวิน</div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <a href="https://www.thaiwater.net/water/rain" target="_blank" class="btn-ext">🔗 ThaiWater สสน.</a>
+      <a href="https://hydro.isc.go.th/main/index" target="_blank" class="btn-ext">🔗 กรมทรัพยากรน้ำ</a>
+      <a href="https://www.tmd.go.th/rainfall.php" target="_blank" class="btn-ext">🔗 อุตุนิยมวิทยา</a>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:14px">
+    <!-- LEFT MAP -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#081625;border:1px solid #1a3a5c;border-radius:8px;padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:#6b8caa;font-weight:600">📡 เรดาร์ฝน:</span>
+        <button class="btn on" id="w-btn-rv" onclick="wRvToggle()">🌧️ RainViewer เปิด</button>
+        <button class="btn on" id="w-btn-risk" onclick="wRiskToggle()">🔴 โซนเสี่ยง</button>
+        <button class="btn" id="w-btn-station" onclick="wStationToggle()">📍 สถานี</button>
+        <span style="width:1px;height:16px;background:#1a3a5c"></span>
+        <button onclick="wRvStep(-5)" style="background:#081625;border:1px solid #1a3a5c;color:#e0eeff;padding:2px 7px;border-radius:5px;cursor:pointer;font-size:12px">⏮</button>
+        <button onclick="wRvStep(-1)" style="background:#081625;border:1px solid #1a3a5c;color:#e0eeff;padding:2px 7px;border-radius:5px;cursor:pointer;font-size:12px">◀</button>
+        <button id="w-btn-play" onclick="wRvPlayPause()" style="background:#00c6ff22;border:1px solid #00c6ff;color:#00c6ff;padding:2px 10px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:700;min-width:34px">▶</button>
+        <button onclick="wRvStep(1)" style="background:#081625;border:1px solid #1a3a5c;color:#e0eeff;padding:2px 7px;border-radius:5px;cursor:pointer;font-size:12px">▶</button>
+        <button onclick="wRvStep(5)" style="background:#081625;border:1px solid #1a3a5c;color:#e0eeff;padding:2px 7px;border-radius:5px;cursor:pointer;font-size:12px">⏭</button>
+        <input type="range" id="w-rv-slider" min="0" max="10" value="10" oninput="wRvSeek(this.value)" style="width:110px;accent-color:#00c6ff;cursor:pointer">
+        <span id="w-rv-time" style="font-size:11px;color:#00c6ff;min-width:130px;white-space:nowrap">กำลังโหลด...</span>
+        <span id="w-rv-frames" style="font-size:11px;color:#6b8caa"></span>
+        <span id="w-rv-status" style="font-size:11px;color:#f43f5e"></span>
+      </div>
+      <div id="map-weather" style="height:500px;border-radius:8px;border:1px solid #1a3a5c"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#6b8caa">
+          <div style="width:100px;height:8px;background:linear-gradient(90deg,#8080ff88,#00ffff99,#00ff0099,#ffff0099,#ff800099,#ff0000bb);border-radius:3px"></div>
+          ฝนเบา → หนักมาก
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#6b8caa;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#f43f5e;display:inline-block"></span>โซนซ้ำซาก</span>
+          <span style="font-size:11px;color:#6b8caa;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block"></span>หมู่บ้านท่วม</span>
+          <span style="font-size:11px;color:#6b8caa;display:flex;align-items:center;gap:4px"><span style="width:18px;height:2px;background:#22c55e;display:inline-block"></span>ลุ่มน้ำ</span>
+        </div>
+      </div>
+    </div>
+    <!-- RIGHT PANEL -->
+    <div style="display:flex;flex-direction:column;gap:10px;max-height:640px;overflow-y:auto">
+      <!-- Current weather -->
+      <div style="background:#0d2540;border:1px solid #1a3a5c;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:600;color:#00c6ff;margin-bottom:10px">⛅ สภาพอากาศปัจจุบัน</div>
+        <div id="w-weather-cards"><div style="text-align:center;color:#6b8caa;font-size:12px;padding:16px">กำลังโหลด...</div></div>
+      </div>
+      <!-- 7-day forecast -->
+      <div style="background:#0d2540;border:1px solid #1a3a5c;border-radius:8px;padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:600;color:#00c6ff">🌦️ พยากรณ์ฝน 7 วัน</div>
+          <select id="w-amp-select" class="si" style="font-size:11px;padding:3px 8px" onchange="loadForecast()">
+            <option value="18.3,97.97">เมืองแม่ฮ่องสอน</option>
+            <option value="18.17,97.93">แม่สะเรียง</option>
+            <option value="17.49,97.77">สบเมย</option>
+            <option value="19.36,98.44">ปาย</option>
+            <option value="18.36,97.98">แม่ลาน้อย</option>
+            <option value="18.82,97.94">ขุนยวม</option>
+            <option value="16.71,98.57">แม่สอด</option>
+            <option value="17.58,97.93">ท่าสองยาง</option>
+            <option value="16.89,98.57">พบพระ</option>
+          </select>
+        </div>
+        <div id="w-forecast-bar" style="margin-bottom:8px"></div>
+        <canvas id="w-forecast-chart" height="170"></canvas>
+        <div style="font-size:10px;color:#6b8caa;margin-top:5px;text-align:right">Open-Meteo.com · อัปเดตทุก 1 ชม.</div>
+      </div>
+      <!-- สสน. API -->
+      <div style="background:#0a1e35;border:1px solid #1a3a5c;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:600;color:#fbbf24;margin-bottom:8px">📌 สสน. ThaiWater API</div>
+        <div style="font-size:11px;color:#6b8caa;line-height:1.6;margin-bottom:8px">ดึงข้อมูลสถานีวัดน้ำฝนจาก สสน. (ต้องมี API Key จาก standard.thaiwater.net)</div>
+        <div style="display:flex;gap:6px">
+          <input id="w-hii-key" class="si" placeholder="ใส่ API Key ที่นี่..." style="flex:1;font-size:11px">
+          <button onclick="loadHIIData()" class="btn-dl" style="font-size:11px;padding:5px 10px">โหลด</button>
+        </div>
+        <div id="w-hii-status" style="font-size:11px;color:#6b8caa;margin-top:5px"></div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
+          <a href="https://www.thaiwater.net/water/rain" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none">→ แผนที่ฝน สสน. (thaiwater.net)</a>
+          <a href="https://www.thaiwater.net/water/ground" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none">→ ระดับน้ำในแม่น้ำ</a>
+          <a href="https://hydro.isc.go.th/main/index" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none">→ กรมทรัพยากรน้ำ</a>
+          <a href="https://disaster.mhs-pao.go.th/dashboard.php#rainfall" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none">→ Dashboard ปภ.แม่ฮ่องสอน</a>
+          <a href="https://standard.thaiwater.net/docs" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none">→ สมัคร API Key สสน.</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -374,7 +469,7 @@ const AMPS_MS=['ขุนยวม','ปางมะผ้า','ปาย','ส�
 
 const C={flood:'#38bdf8',samsak:'#f43f5e',drought:'#fb923c',ok:'#4ade80',
          muted:'#6b8caa',grid:'#1a3a5c44',purple:'#a78bfa',yellow:'#fbbf24'};
-const TABS=['overview','map','village','district','trend','samsak','projects','analysis'];
+const TABS=['overview','map','village','district','trend','samsak','projects','analysis','weather'];
 
 function goTab(name){
   TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==name));
@@ -386,6 +481,7 @@ function goTab(name){
   if(name==='samsak')initSs();
   if(name==='projects')renderProj();
   if(name==='analysis'&&!anDone)initAnalysis();
+  if(name==='weather'){if(!wMap)initWeatherTab();}
 }
 
 function mkBar(id,labels,datasets,horiz,stacked){
@@ -859,6 +955,282 @@ function toggleRiskZones(){
     if(riskZoneLayer)mMain.removeLayer(riskZoneLayer);
   }
 }
+
+
+// ═══════════════════════════════════
+// WEATHER TAB – REALTIME RADAR + FORECAST
+// ═══════════════════════════════════
+let wMap=null, wRvFrames=[], wRvIdx=0, wRvLayer=null, wRvPlaying=false, wRvTimer=null;
+let wRiskLayer=null, wStationLayer=null, wBoundLayer=null;
+let wRvOn=true, wRiskOn=true, wStationOn=false;
+let wForecastChart=null;
+
+// District centers for weather stations
+const DIST_CENTERS = [
+  {name:'เมืองแม่ฮ่องสอน', lat:18.3, lon:97.97, prov:'แม่ฮ่องสอน'},
+  {name:'ปาย',               lat:19.36, lon:98.44, prov:'แม่ฮ่องสอน'},
+  {name:'แม่สะเรียง',       lat:18.17, lon:97.93, prov:'แม่ฮ่องสอน'},
+  {name:'แม่ลาน้อย',        lat:18.36, lon:97.98, prov:'แม่ฮ่องสอน'},
+  {name:'สบเมย',            lat:17.49, lon:97.77, prov:'แม่ฮ่องสอน'},
+  {name:'ขุนยวม',            lat:18.82, lon:97.94, prov:'แม่ฮ่องสอน'},
+  {name:'ปางมะผ้า',          lat:19.53, lon:98.27, prov:'แม่ฮ่องสอน'},
+  {name:'แม่สอด',           lat:16.71, lon:98.57, prov:'ตาก'},
+  {name:'ท่าสองยาง',        lat:17.58, lon:97.93, prov:'ตาก'},
+  {name:'แม่ระมาด',         lat:17.43, lon:98.52, prov:'ตาก'},
+  {name:'พบพระ',            lat:16.89, lon:98.57, prov:'ตาก'},
+];
+
+function initWeatherTab() {
+  if(wMap) return;
+
+  // Init map
+  wMap = L.map('map-weather').setView([18.0, 98.0], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OSM', maxZoom:18, opacity:0.5}).addTo(wMap);
+
+  // Add basin + province boundaries
+  if(GEO_DATA) {
+    L.geoJSON({"type":"FeatureCollection","features":GEO_DATA.basin.features},
+      {style:{color:'#22c55e',weight:2.5,fillOpacity:0.03,dashArray:'6,3'}}).addTo(wMap);
+    L.geoJSON({"type":"FeatureCollection","features":GEO_DATA.province.features},
+      {style:{color:'#a78bfa',weight:1.5,fillOpacity:0.02,dashArray:'4,3'},
+       onEachFeature:(f,l)=>{const n=f.properties.PROV_NAMT||'';if(n)l.bindTooltip(n,{sticky:true,className:'leaflet-tooltip'});}
+      }).addTo(wMap);
+    L.geoJSON({"type":"FeatureCollection","features":GEO_DATA.district.features},
+      {style:{color:'#60a5fa',weight:1,fillOpacity:0.01,dashArray:'3,4'},
+       onEachFeature:(f,l)=>{const n=f.properties.AMP_NAMT||'';if(n)l.bindTooltip('อ.'+n,{sticky:true,className:'leaflet-tooltip'});}
+      }).addTo(wMap);
+    L.geoJSON({"type":"FeatureCollection","features":GEO_DATA.river_main.features},
+      {style:{color:'#38bdf8',weight:1.5,opacity:0.7}}).addTo(wMap);
+  }
+
+  // Add flood/samsak villages
+  VILLAGES.filter(v=>v.type==='flood').forEach(v=>{
+    const isSs=v.samsak>=4;
+    const col=isSs?'#f43f5e':'#38bdf8';
+    L.circleMarker([v.lat,v.lon],{radius:isSs?5:3,fillColor:col,color:col,weight:1,opacity:.7,fillOpacity:.6})
+     .bindPopup(`<b>${v['หมู่บ้าน']}</b><br>อ.${v['อำเภอ']}${isSs?'<br>⚠️ ซ้ำซาก '+v.samsak+'ปี':''}`)
+     .addTo(wMap);
+  });
+
+  // Risk zone circles
+  wRiskLayer = L.layerGroup();
+  const ampBox = {};
+  VILLAGES.filter(v=>v.type==='flood'&&v.samsak>=4).forEach(v=>{
+    const k=v['อำเภอ'];
+    if(!ampBox[k]) ampBox[k]={lats:[],lons:[],pv:v['จังหวัด']};
+    ampBox[k].lats.push(v.lat); ampBox[k].lons.push(v.lon);
+  });
+  Object.entries(ampBox).forEach(([amp,b])=>{
+    const clat=b.lats.reduce((s,x)=>s+x,0)/b.lats.length;
+    const clon=b.lons.reduce((s,x)=>s+x,0)/b.lons.length;
+    const n=b.lats.length;
+    L.circle([clat,clon],{radius:n*500+2000,color:'#f43f5e',weight:2,
+      fillColor:'#f43f5e',fillOpacity:0.06,dashArray:'6,4'})
+     .bindTooltip(`⚠️ อ.${amp} (${b.pv})<br>ซ้ำซาก ${n} หมู่บ้าน`,{sticky:true,className:'leaflet-tooltip'})
+     .addTo(wRiskLayer);
+  });
+  wRiskLayer.addTo(wMap);
+
+  // Station markers
+  wStationLayer = L.layerGroup();
+  DIST_CENTERS.forEach(dc=>{
+    L.circleMarker([dc.lat,dc.lon],{radius:7,fillColor:'#fbbf24',color:'#f59e0b',weight:2,opacity:1,fillOpacity:.9})
+     .bindPopup(`<b>📍 ${dc.name}</b><br>จ.${dc.prov}<br><small>คลิก "โหลดพยากรณ์" เพื่อดูข้อมูล</small>`)
+     .on('click',()=>{ document.getElementById('w-amp-select').value=`${dc.lat},${dc.lon}`; loadForecast(); })
+     .addTo(wStationLayer);
+  });
+
+  // Start RainViewer
+  loadRainViewer();
+  // Load current weather
+  loadCurrentWeather();
+  // Load initial forecast
+  loadForecast();
+}
+
+// ── RainViewer ──
+function loadRainViewer() {
+  document.getElementById('w-rv-time').textContent = 'กำลังโหลดเรดาร์...';
+  fetch('https://api.rainviewer.com/public/weather-maps.json')
+    .then(r=>r.json())
+    .then(data=>{
+      wRvFrames = (data.radar.past||[]).concat(data.radar.nowcast||[]);
+      wRvIdx = wRvFrames.length-1;
+      document.getElementById('w-rv-slider').max = wRvFrames.length-1;
+      document.getElementById('w-rv-slider').value = wRvIdx;
+      if(wRvOn) wShowFrame(wRvIdx);
+      document.getElementById('w-rv-frames').textContent = `${wRvFrames.length} เฟรม`;
+    })
+    .catch(()=>document.getElementById('w-rv-status').textContent='❌ โหลดเรดาร์ไม่ได้ ตรวจสอบอินเทอร์เน็ต');
+}
+
+function wShowFrame(idx) {
+  if(!wMap||!wRvFrames[idx]) return;
+  if(wRvLayer) wMap.removeLayer(wRvLayer);
+  const ts=wRvFrames[idx].time;
+  wRvLayer=L.tileLayer(
+    `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/6/1_1.png`,
+    {opacity:0.55,zIndex:10,attribution:'© RainViewer'}
+  ).addTo(wMap);
+  const dt=new Date(ts*1000);
+  const isPast=idx<(wRvFrames.length-3);
+  const lbl=dt.toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short',year:'2-digit'});
+  document.getElementById('w-rv-time').textContent=(isPast?'🕐 ย้อนหลัง: ':'🔴 ล่าสุด: ')+lbl;
+  document.getElementById('w-rv-slider').value=idx;
+  document.getElementById('w-rv-frames').textContent=`${idx+1}/${wRvFrames.length}`;
+}
+function wRvToggle(){
+  wRvOn=!wRvOn;
+  document.getElementById('w-btn-rv').classList.toggle('on',wRvOn);
+  document.getElementById('w-btn-rv').textContent=wRvOn?'🌧️ RainViewer เปิด':'🌧️ RainViewer ปิด';
+  if(wRvOn){ if(!wRvFrames.length)loadRainViewer(); else wShowFrame(wRvIdx); }
+  else{ if(wRvLayer){wMap.removeLayer(wRvLayer);wRvLayer=null;} wRvStop(); }
+}
+function wRvPlayPause(){wRvPlaying?wRvStop():wRvPlay();}
+function wRvPlay(){
+  wRvPlaying=true;
+  document.getElementById('w-btn-play').textContent='⏸';
+  wRvTimer=setInterval(()=>{wRvIdx=(wRvIdx+1)%wRvFrames.length;wShowFrame(wRvIdx);},500);
+}
+function wRvStop(){
+  wRvPlaying=false; clearInterval(wRvTimer);
+  const b=document.getElementById('w-btn-play');if(b)b.textContent='▶';
+}
+function wRvStep(d){wRvStop();wRvIdx=Math.max(0,Math.min(wRvFrames.length-1,wRvIdx+d));wShowFrame(wRvIdx);}
+function wRvSeek(v){wRvStop();wRvIdx=+v;wShowFrame(wRvIdx);}
+function wRiskToggle(){
+  wRiskOn=!wRiskOn;
+  document.getElementById('w-btn-risk').classList.toggle('on',wRiskOn);
+  if(wRiskOn)wRiskLayer.addTo(wMap); else wMap.removeLayer(wRiskLayer);
+}
+function wStationToggle(){
+  wStationOn=!wStationOn;
+  document.getElementById('w-btn-station').classList.toggle('on',wStationOn);
+  if(wStationOn)wStationLayer.addTo(wMap); else wMap.removeLayer(wStationLayer);
+}
+
+// ── Open-Meteo: Current weather ──
+async function loadCurrentWeather(){
+  const cards=document.getElementById('w-weather-cards');
+  const centers=DIST_CENTERS.slice(0,5);
+  const results=await Promise.all(centers.map(dc=>
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${dc.lat}&longitude=${dc.lon}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&daily=precipitation_sum&forecast_days=1&timezone=Asia%2FBangkok`)
+    .then(r=>r.json()).catch(()=>null)
+  ));
+  const wxIcon=code=>{if(code===0)return'☀️';if(code<=3)return'⛅';if(code<=48)return'🌫️';if(code<=67)return'🌧️';if(code<=77)return'❄️';if(code<=82)return'🌦️';return'⛈️';};
+  const riskColor=rain=>rain>=30?'#f43f5e':rain>=15?'#fb923c':rain>=5?'#fbbf24':'#4ade80';
+  cards.innerHTML=results.map((d,i)=>{
+    const c=centers[i];
+    if(!d||!d.current)return`<div style="font-size:11px;color:#6b8caa;padding:4px">${c.name}: โหลดไม่ได้</div>`;
+    const cur=d.current;
+    const rain=d.daily?.precipitation_sum?.[0]??0;
+    return`<div style="background:#081625;border:1px solid #1a3a5c33;border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">${wxIcon(cur.weather_code)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#e0eeff">${c.name}</div>
+        <div style="font-size:11px;color:#6b8caa">${cur.temperature_2m}°C · ความชื้น ${cur.relative_humidity_2m}% · ลม ${cur.wind_speed_10m}km/h</div>
+      </div>
+      <div style="text-align:right;white-space:nowrap">
+        <div style="font-size:13px;font-weight:700;color:${riskColor(rain)}">${rain} มม.</div>
+        <div style="font-size:10px;color:#6b8caa">ฝนวันนี้</div>
+      </div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${riskColor(rain)};flex-shrink:0"></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Open-Meteo: 7-day forecast ──
+async function loadForecast(){
+  const sel=document.getElementById('w-amp-select');
+  const [lat,lon]=sel.value.split(',').map(Number);
+  const ampName=sel.options[sel.selectedIndex].text;
+  const bar=document.getElementById('w-forecast-bar');
+  bar.innerHTML='<div style="font-size:11px;color:#6b8caa">กำลังโหลด...</div>';
+
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code&forecast_days=7&timezone=Asia%2FBangkok`);
+    const data=await r.json();
+    const days=data.daily;
+    const wxIcon=code=>{if(code===0)return'☀️';if(code<=3)return'⛅';if(code<=48)return'🌫️';if(code<=67)return'🌧️';return'⛈️';};
+    const riskLvl=rain=>rain>=50?{c:'#f43f5e',l:'เสี่ยงสูง'}:rain>=20?{c:'#fb923c',l:'เฝ้าระวัง'}:rain>=5?{c:'#fbbf24',l:'มีฝน'}:{c:'#4ade80',l:'ปกติ'};
+
+    // Mini day cards
+    bar.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">
+      ${days.date.map((dt,i)=>{
+        const d=new Date(dt);
+        const rain=days.precipitation_sum[i]||0;
+        const rl=riskLvl(rain);
+        const dayName=['อา','จ','อ','พ','พฤ','ศ','ส'][d.getDay()];
+        return`<div style="background:#081625;border:1px solid ${rl.c}44;border-radius:6px;padding:5px 4px;text-align:center">
+          <div style="font-size:10px;color:#6b8caa">${dayName} ${d.getDate()}</div>
+          <div style="font-size:14px;margin:2px 0">${wxIcon(days.weather_code[i])}</div>
+          <div style="font-size:11px;font-weight:700;color:${rl.c}">${rain.toFixed(1)}</div>
+          <div style="font-size:9px;color:#6b8caa">มม.</div>
+          <div style="font-size:9px;color:${rl.c};margin-top:2px">${rl.l}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    // Chart
+    if(wForecastChart) wForecastChart.destroy();
+    const ctx=document.getElementById('w-forecast-chart').getContext('2d');
+    wForecastChart=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:days.date.map(dt=>{const d=new Date(dt);return`${d.getDate()}/${d.getMonth()+1}`;}),
+        datasets:[
+          {label:'ฝนสะสม (มม.)',data:days.precipitation_sum,backgroundColor:days.precipitation_sum.map(r=>r>=50?'#f43f5e99':r>=20?'#fb923c99':r>=5?'#fbbf2499':'#38bdf888'),borderRadius:3,yAxisID:'y'},
+          {type:'line',label:'ความน่าจะเป็นฝน (%)',data:days.precipitation_probability_max,borderColor:'#a78bfa',borderWidth:1.5,pointRadius:3,fill:false,tension:0.3,yAxisID:'y2'}
+        ]
+      },
+      options:{responsive:true,
+        plugins:{
+          title:{display:true,text:`อ.${ampName}`,color:'#a0c0e0',font:{family:'Sarabun',size:12}},
+          legend:{labels:{color:'#a0c0e0',font:{family:'Sarabun',size:10},boxWidth:10}}
+        },
+        scales:{
+          x:{ticks:{color:'#6b8caa',font:{family:'Sarabun',size:10}},grid:{color:'#1a3a5c44'}},
+          y:{ticks:{color:'#6b8caa',font:{family:'Sarabun',size:10}},grid:{color:'#1a3a5c44'},position:'left',title:{display:true,text:'ฝน (มม.)',color:'#6b8caa',font:{size:10}}},
+          y2:{ticks:{color:'#a78bfa',font:{family:'Sarabun',size:10}},grid:{display:false},position:'right',title:{display:true,text:'% ฝน',color:'#a78bfa',font:{size:10}},max:100}
+        }
+      }
+    });
+  }catch(e){bar.innerHTML='<div style="color:#f43f5e;font-size:11px">โหลดพยากรณ์ไม่ได้</div>';}
+}
+
+// ── สสน. HII API (ต้องมี Key) ──
+async function loadHIIData(){
+  const key=document.getElementById('w-hii-key').value.trim();
+  const status=document.getElementById('w-hii-status');
+  if(!key){status.style.color='#fb923c';status.textContent='กรุณาใส่ API Key ก่อน';return;}
+  status.textContent='กำลังทดสอบ...';
+  // ThaiWater standard API endpoint for rainfall stations
+  const url=`https://api.thaiwater.net/api/v1/thaiwater/proxies/rainfall24hr?province_id=58&api_key=${key}`;
+  try{
+    const r=await fetch(url);
+    if(!r.ok){status.style.color='#f43f5e';status.textContent=`Error ${r.status}: Key อาจไม่ถูกต้อง`;return;}
+    const data=await r.json();
+    status.style.color='#4ade80';
+    status.textContent=`✅ เชื่อมต่อสำเร็จ! พบ ${data?.result?.length||0} สถานี`;
+    // Plot stations on map
+    if(data?.result){
+      const stGrp=L.layerGroup();
+      data.result.forEach(st=>{
+        if(!st.lat||!st.lng)return;
+        const rain=st.rainfall_24h||0;
+        const col=rain>=50?'#f43f5e':rain>=20?'#fb923c':rain>=5?'#fbbf24':'#4ade80';
+        L.circleMarker([st.lat,st.lng],{radius:8,fillColor:col,color:'#fff',weight:1,fillOpacity:.9})
+         .bindPopup(`<b>${st.tele_station_name||st.station_name||'สถานี'}</b><br>ฝน 24ชม.: <b>${rain} มม.</b>`)
+         .addTo(stGrp);
+      });
+      stGrp.addTo(wMap);
+    }
+  }catch(e){status.style.color='#f43f5e';status.textContent='เชื่อมต่อไม่ได้ (CORS หรือ Key ผิด)';}
+}
+
+// Auto-init when tab is activated
+const _origGoTab=goTab;
 
 </script>
 </body></html>
