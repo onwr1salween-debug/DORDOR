@@ -74,6 +74,13 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
 .stat-num{font-size:22px;font-weight:700;margin-bottom:2px}
 .stat-lbl{font-size:11px;color:#6b8caa}
 .leaflet-tooltip{background:#081625;border:1px solid #1a3a5c;color:#e0eeff;font-family:'Sarabun',sans-serif;font-size:12px}
+.link-card{display:flex;align-items:flex-start;gap:10px;background:#081625;border:1px solid #1a3a5c;border-radius:7px;padding:9px 11px;text-decoration:none;transition:border-color .2s;color:inherit}
+.link-card:hover{border-color:#00c6ff44}
+.link-card span{font-size:18px;flex-shrink:0;margin-top:1px}
+.nc-flood{border-left:3px solid #38bdf8}
+.nc-rain{border-left:3px solid #a78bfa}
+.nc-landslide{border-left:3px solid #fb923c}
+.nc-alert{border-left:3px solid #f43f5e}
 .btn-ext{background:#0a2035;border:1px solid #1a3a5c;color:#60a5fa;padding:5px 11px;border-radius:6px;
   cursor:pointer;font-family:inherit;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .btn-ext:hover{border-color:#60a5fa}
@@ -103,6 +110,7 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
     <button class="tab" onclick="goTab('projects')">📁 โครงการ</button>
     <button class="tab" onclick="goTab('analysis')">🔍 วิเคราะห์ชี้เป้า</button>
     <button class="tab" onclick="goTab('weather')">🌧️ สภาพอากาศ-เรดาร์</button>
+    <button class="tab" onclick="goTab('news')">📰 เหตุการณ์ในพื้นที่</button>
   </div>
 </div>
 
@@ -306,6 +314,13 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
         <option value="ด้านที่ 4">ด้าน 4 (แหล่งน้ำ)</option>
         <option value="ด้านที่ 5">ด้าน 5 (คุณภาพน้ำ)</option>
       </select>
+      <select class="si" id="proj-year" onchange="filterProj()">
+        <option value="">ทุกปี (67-70)</option>
+        <option value="67">ปี 2567</option>
+        <option value="68">ปี 2568</option>
+        <option value="69">ปี 2569</option>
+        <option value="70">ปี 2570</option>
+      </select>
       <select class="si" id="proj-tag" onchange="filterProj()">
         <option value="">ทุกพื้นที่</option>
         <option value="S">ในพื้นที่ซ้ำซาก (S)</option>
@@ -453,6 +468,80 @@ tfoot td{border-top:2px solid #1a3a5c;font-weight:700;color:#00c6ff;background:#
   </div>
 </div>
 
+
+<!-- ===== NEWS / EVENTS TAB ===== -->
+<div id="tab-news" class="hidden">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#00c6ff">📰 เหตุการณ์ในพื้นที่ลุ่มน้ำสาละวิน</div>
+      <div style="font-size:11px;color:#6b8caa;margin-top:2px">ข่าวสาร เหตุการณ์ และประกาศเตือนภัยที่เกี่ยวข้องกับ จ.ตาก และ จ.แม่ฮ่องสอน</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn on" id="news-f-all" onclick="filterNews('all')">ทั้งหมด</button>
+      <button class="btn" id="news-f-flood" onclick="filterNews('flood')">💧 น้ำท่วม</button>
+      <button class="btn" id="news-f-rain" onclick="filterNews('rain')">🌧️ ฝน/พายุ</button>
+      <button class="btn" id="news-f-landslide" onclick="filterNews('landslide')">⛰️ ดินถล่ม</button>
+      <button class="btn" id="news-f-alert" onclick="filterNews('alert')">🚨 แจ้งเตือน</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+    <!-- News cards -->
+    <div>
+      <div id="news-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+      <!-- AI Search -->
+      <div style="background:#0d2540;border:1px dashed #1a3a5c;border-radius:10px;padding:16px;margin-top:14px">
+        <div style="font-size:13px;font-weight:600;color:#00c6ff;margin-bottom:8px">🤖 ค้นหาข่าวใหม่ด้วย AI</div>
+        <div style="font-size:11px;color:#6b8caa;margin-bottom:10px">ค้นข่าวล่าสุดจากแหล่งข้อมูลออนไลน์</div>
+        <div style="display:flex;gap:8px">
+          <input class="si" id="news-search-q" value="น้ำท่วม แม่ฮ่องสอน ตาก สาละวิน" style="flex:1;font-size:12px">
+          <button onclick="searchNewsAI()" class="btn-dl" style="font-size:12px;white-space:nowrap">🔍 ค้นหา</button>
+        </div>
+        <div id="news-ai-result" style="margin-top:10px;font-size:12px;color:#6b8caa"></div>
+      </div>
+    </div>
+
+    <!-- Right: links + summary -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <!-- Alert summary -->
+      <div style="background:#0d2540;border:1px solid #1a3a5c;border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#f43f5e;margin-bottom:10px">🚨 สรุปสถานการณ์ล่าสุด</div>
+        <div style="font-size:12px;color:#e0eeff;line-height:1.8">
+          <div style="padding:6px 0;border-bottom:1px solid #1a3a5c22">📍 <b>แม่ฮ่องสอน</b> (19-24 ก.ค.68): ท่วม 5 อำเภอ 23 หมู่บ้าน พื้นที่เกษตร 207 ไร่</div>
+          <div style="padding:6px 0;border-bottom:1px solid #1a3a5c22">📍 <b>ท่าสองยาง ตาก</b> (31 ส.ค.68): น้ำป่าไหลหลาก บ้านแม่สลิดหลวง ต.แม่สอง</div>
+          <div style="padding:6px 0;border-bottom:1px solid #1a3a5c22">📍 <b>แม่ฮ่องสอน</b> (28 ส.ค.68): สูญหาย 2 ราย สะพานบ้านห้วยโป่งขาด เส้นทาง 108</div>
+          <div style="padding:6px 0;border-bottom:1px solid #1a3a5c22">⚠️ <b>กรมทรัพยากรธรณี</b> (10 ก.ย.68): เฝ้าระวัง ปาย ปางมะผ้า แม่สะเรียง สบเมย ขุนยวม แม่ลาน้อย</div>
+          <div style="padding:6px 0">⚠️ <b>สทนช.</b> (17 ก.ค.68): เฝ้าระวังน้ำหลาก ดินโคลนถล่ม ท่าสองยาง แม่ระมาด แม่สอด พบพระ</div>
+        </div>
+      </div>
+      <!-- Official links -->
+      <div style="background:#0d2540;border:1px solid #1a3a5c;border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#00c6ff;margin-bottom:10px">🔗 แหล่งข้อมูลทางการ</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <a href="https://maehongson.prd.go.th" target="_blank" class="link-card">
+            <span>🏛️</span><div><div style="font-size:12px;font-weight:600">สำนักงานประชาสัมพันธ์ จ.แม่ฮ่องสอน</div><div style="font-size:10px;color:#6b8caa">ข่าวสารและสถานการณ์อุทกภัยล่าสุด</div></div>
+          </a>
+          <a href="https://disaster.mhs-pao.go.th/dashboard.php#rainfall" target="_blank" class="link-card">
+            <span>📊</span><div><div style="font-size:12px;font-weight:600">Dashboard ปภ.แม่ฮ่องสอน</div><div style="font-size:10px;color:#6b8caa">ข้อมูลฝนและน้ำท่วมแบบเรียลไทม์</div></div>
+          </a>
+          <a href="https://www.onwr.go.th" target="_blank" class="link-card">
+            <span>💧</span><div><div style="font-size:12px;font-weight:600">สทนช. – ประกาศเตือนภัย</div><div style="font-size:10px;color:#6b8caa">ประกาศเฝ้าระวังน้ำท่วม-ดินโคลนถล่ม</div></div>
+          </a>
+          <a href="https://www.thaiwater.net/water/rain" target="_blank" class="link-card">
+            <span>🌧️</span><div><div style="font-size:12px;font-weight:600">ThaiWater สสน. – แผนที่ฝน</div><div style="font-size:10px;color:#6b8caa">ปริมาณน้ำฝนรายสถานีเรียลไทม์</div></div>
+          </a>
+          <a href="https://www.dmr.go.th" target="_blank" class="link-card">
+            <span>⛰️</span><div><div style="font-size:12px;font-weight:600">กรมทรัพยากรธรณี</div><div style="font-size:10px;color:#6b8caa">แจ้งเตือนดินถล่มและน้ำป่าไหลหลาก</div></div>
+          </a>
+          <a href="https://www.tmd.go.th" target="_blank" class="link-card">
+            <span>☀️</span><div><div style="font-size:12px;font-weight:600">กรมอุตุนิยมวิทยา</div><div style="font-size:10px;color:#6b8caa">พยากรณ์อากาศและเตือนพายุ</div></div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -469,7 +558,7 @@ const AMPS_MS=['ขุนยวม','ปางมะผ้า','ปาย','ส�
 
 const C={flood:'#38bdf8',samsak:'#f43f5e',drought:'#fb923c',ok:'#4ade80',
          muted:'#6b8caa',grid:'#1a3a5c44',purple:'#a78bfa',yellow:'#fbbf24'};
-const TABS=['overview','map','village','district','trend','samsak','projects','analysis','weather'];
+const TABS=['overview','map','village','district','trend','samsak','projects','analysis','weather','news'];
 
 function goTab(name){
   TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==name));
@@ -482,6 +571,7 @@ function goTab(name){
   if(name==='projects')renderProj();
   if(name==='analysis'&&!anDone)initAnalysis();
   if(name==='weather'){if(!wMap)initWeatherTab();}
+  if(name==='news'&&!newsDone)initNews();
 }
 
 function mkBar(id,labels,datasets,horiz,stacked){
@@ -626,7 +716,7 @@ function renderVil(){
     <td style="font-size:12px;color:${rc(v.risk)}">${v.risk||'—'}</td>
     <td style="font-size:11px;color:#6b8caa">${v.ews||'—'}</td>
     <td style="font-size:11px;color:#6b8caa">${v.lat.toFixed(4)},${v.lon.toFixed(4)}</td>
-  </tr>`).join('');
+  </tr>`;}).join('');
   let pg='';
   if(pages>1){
     pg+=`<button ${vilPg===1?'disabled':''} onclick="vpg(${vilPg-1})">‹</button>`;
@@ -775,12 +865,16 @@ function renderProj(){
   const am=document.getElementById('proj-amp').value;
   const pl=document.getElementById('proj-plan').value;
   const tg=document.getElementById('proj-tag').value;
-  projF=PROJECTS.filter(p=>{
+  const yr=document.getElementById('proj-year').value;
+  // Year boundaries: 67=0-858, 68=859-2552, 69=2553-4780, 70=4781+
+  const yearRanges={'67':[0,858],'68':[859,2552],'69':[2553,4780],'70':[4781,9999]};
+  projF=PROJECTS.filter((p,i)=>{
     if(pv&&p.pv!==pv)return false;
     if(am&&p.am!==am)return false;
     if(pl&&p.pl!==pl)return false;
     if(tg==='none'&&p.tg)return false;
     if(tg&&tg!=='none'&&!p.tg.includes(tg))return false;
+    if(yr){const[s,e]=yearRanges[yr]||[0,9999];if(i<s||i>e)return false;}
     if(q&&!(p.n+p.ag+p.am+p.tb).toLowerCase().includes(q))return false;
     return true;
   });
@@ -788,14 +882,22 @@ function renderProj(){
   const pages=Math.ceil(projF.length/PPP);
   const st=(projPg-1)*PPP,en=Math.min(st+PPP,projF.length);
   const planColor={'ด้านที่ 1':C.flood,'ด้านที่ 2':C.samsak,'ด้านที่ 3':C.drought,'ด้านที่ 4':C.ok,'ด้านที่ 5':C.purple};
-  document.getElementById('proj-tbody').innerHTML=projF.slice(st,en).map((p,i)=>`<tr>
+  document.getElementById('proj-tbody').innerHTML=projF.slice(st,en).map((p,i)=>{
+  const rowBg=!p.tg?'background:rgba(244,63,94,0.04)':p.tg.includes('S')?'background:rgba(244,63,94,0.02)':'';
+  return`<tr style="${rowBg}">
     <td style="color:#6b8caa">${st+i+1}</td><td>${p.pv}</td><td>${p.am}</td><td>${p.tb}</td>
     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.n}"><b>${p.n}</b></td>
     <td style="font-size:11px;color:#6b8caa">${p.ag}</td>
     <td><span class="badge" style="background:${(planColor[p.pl]||C.muted)}22;color:${planColor[p.pl]||C.muted}">${p.pl}</span></td>
     <td style="font-size:11px;color:#6b8caa">${p.wt}</td>
     <td style="font-weight:600;color:${C.ok}">${p.b}</td>
-    <td>${p.tg?p.tg.split(',').map(t=>`<span class="match-tag mt-${t}">${t==='F'?'💧ท่วม':t==='D'?'🌵แล้ง':t==='S'?'⚠️ซ้ำซาก':t}</span>`).join(''):'<span style="color:#6b8caa;font-size:11px">ไม่ตรง</span>'}</td>
+    <td style="white-space:nowrap">${(()=>{
+      if(!p.tg)return '<span style="color:#f43f5e;font-size:11px;font-weight:600">❌ ไม่ตรงพื้นที่</span>';
+      const tags=p.tg.split(',');
+      const hasSamsak=tags.includes('S');
+      const bg=hasSamsak?'border:1px solid #f43f5e44;background:#f43f5e11':'border:1px solid #38bdf844;background:#38bdf811';
+      return '<div style="'+bg+';border-radius:5px;padding:2px 4px">'+tags.map(t=>'<span class="match-tag mt-'+t+'">'+(t==='F'?'💧ท่วม':t==='D'?'🌵แล้ง':t==='S'?'⚠️ซ้ำซาก':t)+'</span>').join('')+'</div>';
+    })()}</td>
   </tr>`).join('');
   let pg='';
   if(pages>1){
@@ -864,7 +966,7 @@ let rvFrames=[], rvIdx=0, rvLayer=null, rvPlaying=false, rvTimer=null;
 const rvOn={state:false};
 
 function initRainViewer(){
-  fetch('https://api.rainviewer.com/public/weather-maps.json')
+  fetch('https://api.rainviewer.com/public/weather-maps.json', {cache:'no-store'})
     .then(r=>r.json())
     .then(data=>{
       rvFrames = (data.radar.past||[]).concat(data.radar.nowcast||[]);
@@ -881,7 +983,7 @@ function showRvFrame(idx){
   if(rvLayer){mMain.removeLayer(rvLayer);}
   const ts = rvFrames[idx].time;
   rvLayer = L.tileLayer(
-    `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/6/1_1.png`,
+    `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/4/1_1.png`,
     {opacity:0.55, zIndex:10, attribution:'© RainViewer'}
   ).addTo(mMain);
   // Update timestamp label
@@ -1052,7 +1154,7 @@ function initWeatherTab() {
 // ── RainViewer ──
 function loadRainViewer() {
   document.getElementById('w-rv-time').textContent = 'กำลังโหลดเรดาร์...';
-  fetch('https://api.rainviewer.com/public/weather-maps.json')
+  fetch('https://api.rainviewer.com/public/weather-maps.json', {cache:'no-store'})
     .then(r=>r.json())
     .then(data=>{
       wRvFrames = (data.radar.past||[]).concat(data.radar.nowcast||[]);
@@ -1062,17 +1164,24 @@ function loadRainViewer() {
       if(wRvOn) wShowFrame(wRvIdx);
       document.getElementById('w-rv-frames').textContent = `${wRvFrames.length} เฟรม`;
     })
-    .catch(()=>document.getElementById('w-rv-status').textContent='❌ โหลดเรดาร์ไม่ได้ ตรวจสอบอินเทอร์เน็ต');
+    .catch(e=>{
+    document.getElementById('w-rv-status').textContent='❌ โหลดเรดาร์ไม่ได้: '+e.message;
+    // fallback: try direct RainViewer website
+    document.getElementById('w-rv-time').textContent='ลองเปิด rainviewer.com โดยตรง';
+  });
 }
 
 function wShowFrame(idx) {
   if(!wMap||!wRvFrames[idx]) return;
-  if(wRvLayer) wMap.removeLayer(wRvLayer);
+  if(wRvLayer){try{wMap.removeLayer(wRvLayer);}catch(e){} wRvLayer=null;}
   const ts=wRvFrames[idx].time;
-  wRvLayer=L.tileLayer(
-    `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/6/1_1.png`,
-    {opacity:0.55,zIndex:10,attribution:'© RainViewer'}
-  ).addTo(wMap);
+  try{
+    wRvLayer=L.tileLayer(
+      `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/4/1_1.png`,
+      {opacity:0.55,zIndex:10,attribution:'© RainViewer',
+       errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}
+    ).addTo(wMap);
+  }catch(e){document.getElementById('w-rv-status').textContent='⚠️ tile error: '+e.message;}
   const dt=new Date(ts*1000);
   const isPast=idx<(wRvFrames.length-3);
   const lbl=dt.toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short',year:'2-digit'});
@@ -1231,6 +1340,90 @@ async function loadHIIData(){
 
 // Auto-init when tab is activated
 const _origGoTab=goTab;
+
+
+// ═══════════════════════════════════
+// NEWS TAB
+// ═══════════════════════════════════
+let newsDone=false;
+const NEWS_DATA = [
+  {id:1, type:'flood', date:'28 ส.ค. 2568', title:'น้ำท่วมแม่ฮ่องสอน เร่งค้นหา 2 ชาวบ้านสูญหาย', body:'สะพานบ้านห้วยโป่ง ต.ห้วยโป่ง อ.เมืองแม่ฮ่องสอน คอสะพานขาด รถทุกคันผ่านไม่ได้ เส้นทาง 108 ถูกตัด ต้องเปลี่ยนเส้นทางขนส่งน้ำมัน', area:'เมืองแม่ฮ่องสอน', severity:'high', url:'https://www.thairath.co.th/news/local/2879360', src:'ไทยรัฐ'},
+  {id:2, type:'rain', date:'31 ส.ค. 2568', title:'ท่าสองยาง ตาก น้ำป่าไหลหลาก บ้านแม่สลิดหลวง', body:'ฝนตกหนักต่อเนื่อง 7 ชั่วโมง มรสุมจากอ่าวมะตะบัน น้ำจากลำห้วยแม่สลิดผสมดินโคลนไหลเข้าชุมชน เตือนห้ามออกพื้นที่เสี่ยงดินโคลนถล่ม', area:'ท่าสองยาง', severity:'high', url:'https://www.thairath.co.th/news/local/2879931', src:'ไทยรัฐ'},
+  {id:3, type:'alert', date:'10 ก.ย. 2568', title:'กรมทรัพยากรธรณี เฝ้าระวัง 6 อำเภอ แม่ฮ่องสอน 11-12 ก.ย.', body:'ปาย ปางมะผ้า แม่สะเรียง สบเมย ขุนยวม แม่ลาน้อย เสี่ยงดินถล่มและน้ำป่าไหลหลาก ฝน 24 ชม. เกิน 100 มม.', area:'แม่ฮ่องสอน', severity:'high', url:'https://www.thaipbs.or.th/news/content/356404', src:'ThaiPBS'},
+  {id:4, type:'flood', date:'19-24 ก.ค. 2568', title:'อุทกภัยแม่ฮ่องสอน 5 อำเภอ 23 หมู่บ้าน', body:'พื้นที่การเกษตรพืชไร่ 25 ไร่ พื้นที่นา 182 ไร่ บ้านเรือนราษฎรได้รับผลกระทบ 1 หลังคาเรือน เจ้าหน้าที่ลงพื้นที่สำรวจความเสียหาย', area:'แม่ฮ่องสอน', severity:'medium', url:'https://maehongson.prd.go.th/th/content/category/detail/id/9/iid/410782', src:'สปน.แม่ฮ่องสอน'},
+  {id:5, type:'alert', date:'17 ก.ค. 2568', title:'สทนช. เฝ้าระวัง ท่าสองยาง แม่ระมาด แม่สอด พบพระ', body:'ประกาศเตือนเฝ้าระวังน้ำหลาก ดินโคลนถล่ม น้ำท่วมขัง จ.ตาก หลังคาดการณ์ฝนหนักถึงหนักมาก', area:'ตาก', severity:'medium', url:'https://www.thaipbs.or.th/news/content/354364', src:'ThaiPBS'},
+  {id:6, type:'alert', date:'24-28 ส.ค. 2568', title:'ปภ. แจ้งเตือน 45 จังหวัด รวมแม่ฮ่องสอนทุกอำเภอ', body:'เมืองแม่ฮ่องสอน ปาย ขุนยวม แม่สะเรียง และสบเมย เสี่ยงน้ำท่วมฉับพลัน น้ำป่าไหลหลาก ดินโคลนถล่ม', area:'แม่ฮ่องสอน', severity:'high', url:'https://www.thaipbs.or.th/news/content/355661', src:'ThaiPBS'},
+  {id:7, type:'rain', date:'31 ส.ค. 2568', title:'รมว.เกษตรฯ ลงพื้นที่แม่ฮ่องสอน ตรวจอุทกภัยพายุคาจิกิ', body:'ตรวจติดตามสถานการณ์อุทกภัย น้ำป่าไหลหลาก และดินโคลนถล่มจากอิทธิพลพายุ "คาจิกิ" ส่งผลต่อพื้นที่เกษตรและครัวเรือนจำนวนมาก', area:'แม่ฮ่องสอน', severity:'high', url:'https://www.prd.go.th/th/content/category/detail/id/39/iid/419633', src:'PRD'},
+  {id:8, type:'alert', date:'30 ส.ค.-3 ก.ย. 2568', title:'เตือน 35 จว. น้ำท่วม-ดินถล่ม รวมตาก ทุกอำเภอในลุ่มสาละวิน', body:'ท่าสองยาง แม่ระมาด แม่สอด พบพระ ตาก อยู่ในรายชื่อพื้นที่เสี่ยง ประกาศฉบับที่ 19/2568', area:'ตาก', severity:'high', url:'https://www.bangkokbiznews.com/news/news-update/1196476', src:'Bangkok Biznews'},
+  {id:9, type:'flood', date:'12 ก.ย. 2567', title:'น้ำสาละวินสูงต่อเนื่อง สบเมย 22 ครัวเรือนขนของหนีน้ำ', body:'บ้านท่าตาฝั่ง อ.สบเมย น้ำท่วมเส้นทาง รถทุกชนิดผ่านไม่ได้ มวลน้ำสาละวินเพิ่มสูงหลังฝนตก 8-11 ก.ย.67', area:'สบเมย', severity:'medium', url:'https://www.thaipbs.or.th/news/content/344129', src:'ThaiPBS'},
+  {id:10, type:'alert', date:'31 ต.ค.-2 พ.ย. 2568', title:'กรมทรัพยากรธรณี เฝ้าระวังดินถล่ม 13 จังหวัด', body:'แจ้งเตือนให้อาสาสมัครเครือข่ายเฝ้าระวังภัยดินถล่มและน้ำป่าไหลหลาก รวมพื้นที่ในลุ่มน้ำสาละวิน', area:'แม่ฮ่องสอน', severity:'medium', url:'https://www.thairath.co.th/news/local/2892543', src:'ไทยรัฐ'},
+];
+
+const NEWS_TYPE_MAP={flood:{icon:'💧',label:'น้ำท่วม',cls:'nc-flood',btnColor:'#38bdf8'},rain:{icon:'🌧️',label:'ฝน/พายุ',cls:'nc-rain',btnColor:'#a78bfa'},landslide:{icon:'⛰️',label:'ดินถล่ม',cls:'nc-landslide',btnColor:'#fb923c'},alert:{icon:'🚨',label:'แจ้งเตือน',cls:'nc-alert',btnColor:'#f43f5e'}};
+const SEVERITY_MAP={high:{c:'#f43f5e',l:'ระดับสูง'},medium:{c:'#fb923c',l:'เฝ้าระวัง'},low:{c:'#4ade80',l:'ปกติ'}};
+let newsFilter='all';
+
+function initNews(){ newsDone=true; renderNews(); }
+function filterNews(f){
+  newsFilter=f;
+  ['all','flood','rain','landslide','alert'].forEach(x=>{document.getElementById('news-f-'+x).classList.toggle('on',x===f);});
+  renderNews();
+}
+function renderNews(){
+  const items=newsFilter==='all'?NEWS_DATA:NEWS_DATA.filter(n=>n.type===newsFilter);
+  document.getElementById('news-cards').innerHTML=items.map(n=>{
+    const t=NEWS_TYPE_MAP[n.type]||NEWS_TYPE_MAP.alert;
+    const sv=SEVERITY_MAP[n.severity]||SEVERITY_MAP.low;
+    return`<div class="panel ${t.cls}" style="padding:14px 16px;cursor:pointer" onclick="window.open('${n.url}','_blank')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+          <span style="font-size:16px;flex-shrink:0">${t.icon}</span>
+          <div style="font-size:13px;font-weight:600;color:#e0eeff;line-height:1.3">${n.title}</div>
+        </div>
+        <div style="flex-shrink:0;text-align:right">
+          <div style="font-size:10px;font-weight:700;color:${sv.c};background:${sv.c}22;padding:2px 7px;border-radius:10px;margin-bottom:3px">${sv.l}</div>
+          <div style="font-size:10px;color:#6b8caa">${n.date}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#a0c0e0;line-height:1.5;margin-bottom:8px">${n.body}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:6px">
+          <span style="font-size:10px;background:#1a3a5c;color:#6b8caa;padding:2px 7px;border-radius:10px">📍 ${n.area}</span>
+          <span style="font-size:10px;background:#1a3a5c;color:#6b8caa;padding:2px 7px;border-radius:10px">${n.src}</span>
+        </div>
+        <span style="font-size:10px;color:#60a5fa">อ่านเพิ่มเติม →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function searchNewsAI(){
+  const q=document.getElementById('news-search-q').value.trim();
+  const result=document.getElementById('news-ai-result');
+  if(!q)return;
+  result.innerHTML='<div style="color:#6b8caa">กำลังค้นหา...</div>';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:`ค้นหาข่าวล่าสุดเกี่ยวกับ: ${q} ในปี 2568 และสรุปสั้นๆ ภาษาไทย แต่ละข่าว: วันที่ ชื่อข่าว สาระสำคัญ 1 ประโยค พื้นที่ที่เกี่ยวข้อง`}]
+      })
+    });
+    const data=await resp.json();
+    const text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+    if(text){
+      result.innerHTML='<div style="background:#081625;border:1px solid #1a3a5c;border-radius:6px;padding:10px;white-space:pre-wrap;line-height:1.6;color:#e0eeff">'+text.replace(/</g,'&lt;')+'</div>';
+    } else {
+      result.innerHTML='<div style="color:#fb923c">ไม่พบผลลัพธ์ หรือ API ไม่ตอบสนอง</div>';
+    }
+  }catch(e){
+    result.innerHTML=`<div style="color:#f43f5e">เกิดข้อผิดพลาด: ${e.message}<br><small style="color:#6b8caa">ค้นหาด้วยตนเองที่ <a href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=th" target="_blank" style="color:#60a5fa">Google News</a></small></div>`;
+  }
+}
 
 </script>
 </body></html>
